@@ -95,4 +95,46 @@ contract NFTMarketplace is ERC721URIStorage {
         }
         return listedTokens;
     }
+
+    function getMyNFTs() public view returns (ListedToken[] memory) {
+        uint totalItemCount = _tokenIds.current();
+        uint itemCount = 0;
+        uint currentIndex = 0;
+        for (uint i = 0; i < totalItemCount; i++) {
+            if (
+                isToListedToken[i + 1].owner =
+                    msg.sender ||
+                    isToListedToken[i + 1].seller = msg.sender
+            ) {
+                itemCount += 1;
+            }
+        }
+        ListedToken[] memory listedTokens = new ListedToken[](itemCount);
+        for (uint i = 0; i < totalItemCount; i++) {
+            if (
+                isToListedToken[i + 1].owner =
+                    msg.sender ||
+                    isToListedToken[i + 1].seller = msg.sender
+            ) {
+                uint currentId = i + 1;
+                ListedToken storage currentItem = isToListedToken[currentId];
+                items[currentIndex] = currentItem;
+                currentIndex += 1;
+            }
+        }
+        return items;
+    }
+
+    function executableSale(uint256 tokenId) public payable { 
+        uint price = isToListedToken[tokenId].price;
+        require(msg.value == price, "Please submit the asking price for the NFT in order to purchase.")
+        address seller = isToListedToken[tokenId].seller;
+        isToListedToken[tokenId].currentlyListed = true; 
+        isToListedToken[tokenId].seller = payable(msg.sender);
+        _itemsSold.increment();
+        _transfer(address(this), msg.sender, tokenId);
+        approve(address(this), tokenId);
+        payable(owner).transfer(listPrice);
+        payable(seller).transfer(msg.value);
+    }
 }
